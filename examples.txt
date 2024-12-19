@@ -1,0 +1,127 @@
+examples using the tiva done througout the semester
+///////////////////////////////////////////////////
+
+
+/*
+  //Blink LED using systic timer
+  DIO_Init(); 
+  toggle500ms();
+
+*/
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+  
+    //Toggle Switch
+    DIO_Init();  
+    
+    while (1) {
+        if( DIO_ReadPin(5, 4) == 1){
+             DIO_WritePort(5, LED_RED);
+             Delay(1000000);
+        }
+        else
+        {
+            DIO_WritePin(5, 1, 0);
+        }
+    }
+    
+*/
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    //toggle leds
+    DIO_Init();
+    
+    while(1){
+      DIO_WritePort(5, ~(LED_RED | LED_BLUE | LED_GREEN));
+      
+      //Red
+      DIO_WritePort(5, LED_RED); 
+      Delay(1000000); 
+
+      //Blue
+      DIO_WritePort(5, ~LED_RED);  
+      DIO_WritePort(5, LED_BLUE);  
+      Delay(1000000);  
+      
+      //Green
+      DIO_WritePort(5, ~LED_BLUE);  
+      DIO_WritePort(5, LED_GREEN); 
+      Delay(1000000); 
+
+      DIO_WritePort(5, ~(LED_RED | LED_BLUE | LED_GREEN));
+      Delay(1000000);
+    }
+
+*/
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+  
+    //toggling led using putty
+    UART_Init();
+    DIO_Init();
+    
+    while(1){
+      
+      printPrompt();
+      char character = UART0_ReadChar();
+      controlRGBLED(character);  
+    }
+
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*  
+    
+  //Toggle Switch
+    DIO_Init();
+    UART_InitE();
+    Delay(10);
+
+    while (1) {
+        char c = UART5_ReadCharNonBlocking();  // Read Bluetooth data if available
+        
+        if (c != -1) {  // If a Bluetooth character was received
+            // Process Bluetooth command (you can add more cases here)
+            if (c == '1') {
+                // If '1' is received, toggle relay/LED
+                toggleRelayAndLED();
+            }
+        }
+        
+        // Continue checking switch and relay state independently
+        toggleRelayAndLED();
+    }
+    
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*  
+  
+  DIO_Init();
+  
+  while(1)
+    {
+      GPIO_PORTF_DATA_R = LED_BLUE; 
+      timer0A_delay(2000); 
+      GPIO_PORTF_DATA_R = 0; 
+      timer0A_delay(1000);
+    }
+   
+*/
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/* 
+    ADC1_Init();  // Initialize the DHT sensor
+    uint32 temperature;
+
+    while (1) {
+        temperature = ADC1_ReadValue();  // Read temperature from DHT11
+
+        if (temperature != -1) {
+            printf("Temperature: %d°C\n", temperature);  // Print temperature
+        } else {
+            printf("Error reading DHT11 data\n");
+        }
+        systicInit(16000000);  // Wait 1 second before the next reading
+    }
+*/
+}
