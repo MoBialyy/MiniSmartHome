@@ -18,9 +18,9 @@ void DIO_Init(void) {
     set_Bit(&SYSCTL_RCGCGPIO_R, 1U);  // Port B
     set_Bit(&SYSCTL_RCGCGPIO_R, 2U);  //port c
     
-    while ( (SYSCTL_PRGPIO_R & (1U << 5)) == 0) {}
-    while ((SYSCTL_PRGPIO_R & (1U << 1)) == 0) {}  // Port B
-    while ( (SYSCTL_PRGPIO_R & (1U << 2)) == 0) {} //port c
+    while ( (SYSCTL_PRGPIO_R & (1U << 5)) == 0) {}      // Port F
+    while ((SYSCTL_PRGPIO_R & (1U << 1)) == 0) {}       // Port B
+    while ( (SYSCTL_PRGPIO_R & (1U << 2)) == 0) {}      // Port C
     
     // This wil be very annoying to write in set_Bit
     GPIO_PORTF_LOCK_R = 0X4C4F434B;

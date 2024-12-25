@@ -19,62 +19,56 @@
 void main(void){
   
     // Initialize UART, ADC(Temp sensor related), GPIOs and the magnetic door switch 
-    UART_InitE();
-    ADC1_Init();  
-    DIO_Init();
-    door_init();
+    UART_InitE();                                       // initialize UART5 and port E
+    ADC1_Init();                                        // initialize the temperature related ports
+    DIO_Init();                                         // initialize main ports used and clocks
+    door_init();                                        // initialize the magnetic door ports and its interrupt related things
 
     float32 temperature;
-    uint32 prevSwitchState  = DIO_ReadPin(5, 4);  // Initialize previous switch state
-    uint32 switcPlug;
+    uint32 prevSwitchState  = DIO_ReadPin(5, 4);        // Initialize previous switch state
+    uint32 switcPlug;                                   // will keep track to the manual switch that turns the system on/off
+    uint32 enable = 1;                                  // will keep track to the app switch that turns the system on/off
     
     while (1){
-      //GPIOPortB_Handler();
-      //uint32 door = DIO_ReadPin(1,2);
-      //printf("door is %d", door);
-      switcPlug = DIO_ReadPin(5,0);
-      //printf("switchPlug is %d", switcPlug); 
-      if( switcPlug == 1){
+      switcPlug = DIO_ReadPin(5,0);                     // read the manual switch status
+      if(enable ^ switcPlug){                           // 'xor-ing' the manual and app switch, if '1' --> the system is on
          {    
-          //printf("o");
-          // Check if a new signal from the switch is detected
-          if (isNewSwitchSignal(&prevSwitchState)) {
-              printf("Switch toggled\n");
-              //printf("switch is %d \n", DIO_ReadPin(5,4));
-              toggleLamp();  // Toggle lamp based on switch
+          if (isNewSwitchSignal(&prevSwitchState)) {    // Check if a new signal from the switch is detected
+              toggleLamp();                             // Toggle lamp based on switch
           }
-          // Check if a new message is received from Bluetooth
-          else if (isNewMessageReceived()) {
-              printf("Bluetooth message received\n");
-              char c = UART5_ReadChar();
-              if (c == 't') {  // 't' command to toggle lamp via Bluetooth
+          else if (isNewMessageReceived()) {            // Check if a new message is received from Bluetooth
+              char c = UART5_ReadChar();                // read the char received from the app
+              if (c == 't') {                           // 't' command to toggle lamp 
                   toggleLamp();
               }
-          }
-          temperature = ADC1_ReadValue();
-          if (temperature != -1) {
-            UART5_WriteFloat(temperature);
-            if (temperature >= 41) {
-                //UART5_WriteString("H");
-                //printf("temp is %f \n",temperature);
-                ToggleBuzzerOn(); 
-            } else {
-                //UART5_WriteString("k");
-                //printf("temp is %f \n",temperature);
-                ToggleBuzzerOff();
+              else if (c == 'u') {                      // 'u' command to toggle switch plug
+                  enable =!enable;
               }
-            } 
-          else {
-            printf("Error reading DHT11 data\n");
-        }
-          systicInit(16000000);  // Wait 1 second before the next reading
+          }
+          temperature = ADC1_ReadValue();               // read the sensor's temperature
+          if (temperature != -1) {
+                UART5_WriteFloat(temperature);          // send the temperature to the app
+            if (temperature >= 41) {                    // check if temperature is above a given value
+                ToggleBuzzerOn();                       // toggle the hardware buzzer
+            }
+            else {                                      // else here is used to turn off the senso
+                ToggleBuzzerOff();                      // buzzer keeps on 'buzzing' till temperature gets low again
+            }
+          } 
+          systicInit(16000000);                         // Wait and then rerun
         }
       }
-      else{
-        GPIO_PORTF_DATA_R = (1 << 1) | (1 << 2) | (1 << 3);  // Ssystem is Off
-        UART5_WriteString("k");
-        ToggleBuzzerOff();
+      else{                                             // the system is off
+        if (isNewMessageReceived()) {                   // check for message's from the app
+              char c = UART5_ReadChar();                // read the message received
+              if (c == 'u') {                           // 'u' command to toggle switch plug via app
+                  enable = !enable;                     // same as above
+              }
+        }
+        GPIO_PORTF_DATA_R = (1 << 1) | (1 << 2) | (1 << 3);           // system is Off
+        UART5_WriteString("k");                                       // sends 'k' to the app to alert that the system is off
+        ToggleBuzzerOff();                                            // toggle the buzzer off in case it was on while the system was on
       }
-      timer0A_delay(1000);
-    }
+    timer0A_delay(500);                                               // Wait and then rerun
+   }
 }

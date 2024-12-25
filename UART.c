@@ -7,6 +7,7 @@
 
 uint32 lampState = 0;  // 0 OFF, 1 ON
 
+
 void UART0_Init(void){
   
   SYSCTL_RCGCUART_R |= (0x01);
@@ -25,31 +26,25 @@ void UART0_Init(void){
   GPIO_PORTA_PCTL_R = 0X11;
 }
 
-void UART_InitE(void){   //UART5
+void UART_InitE(void){             //UART5 is used as UART0 can't be used as it doesn't have any pins on the tiva, only serial connection
     SYSCTL_RCGCUART_R |= 0x20;
     SYSCTL_RCGCGPIO_R |= (0x10) | (0x20);
     
     unsigned int i;
     for(i = 0; i < 100; i++);
     
-    UART5_CTL_R = 0;
-    UART5_IBRD_R = 104;
-    UART5_FBRD_R = 11;
-    UART5_CC_R = 0;
-    UART5_LCRH_R = 0x60;
-    UART5_CTL_R = 0x301;
+    UART5_CTL_R = 0;               // Disable UART5 during configuration
+    UART5_IBRD_R = 104;            // Integer part of baud rate divisor, this is for 9600 baud rate
+    UART5_FBRD_R = 11;             // Fractional part
+    UART5_CC_R = 0;                // Use system clock as UART clock source
+    UART5_LCRH_R = 0x60;           // 8-bit word length, no parity, one stop bit
+    UART5_CTL_R = 0x301;           // Enable UART5, enable TX and RX
 
-    GPIO_PORTE_DEN_R = 0x30;
-    GPIO_PORTE_AFSEL_R = 0x30;
-    GPIO_PORTE_AMSEL_R = 0x00;
-    GPIO_PORTE_PCTL_R = 0x00110000;
-    
-    //PE4 --> TXD HC-05
-    //PE5 --> RXD HC-05
-    //SWITCH --> PF4
-    //IN1 --> PF1
-    //IN2 --> PF2
-    
+    GPIO_PORTE_DEN_R = 0x30;       // Enable digital I/O on PE4 and PE5
+    GPIO_PORTE_AFSEL_R = 0x30;     // Enable alternate function on PE4 and PE5
+    GPIO_PORTE_AMSEL_R = 0x00;     // Disable analog functionality
+    GPIO_PORTE_PCTL_R = 0x00110000;// Configure PE4 and PE5 for UART5 function
+
     //GPIO_PORTF_DIR_R |= 0x0E;         
     GPIO_PORTF_DEN_R |= 0x1F;         
 }
@@ -114,7 +109,6 @@ void controlIO(char message){
             break;
         case '0':  // Turn off red LED
             DIO_WritePin(5, 1, 0);  
-            //Delay(100000);
             break;
         default:
             //UART5_WriteString("turn off all blue \n");
@@ -125,20 +119,20 @@ void controlIO(char message){
 
 char UART5_ReadChar(void)  {
     char data;
-    while((UART5_FR_R & (1<<4)) != 0);
-    data = UART5_DR_R;
+    while((UART5_FR_R & (1<<4)) != 0);                  // Wait until receive FIFO is not empty
+    data = UART5_DR_R;                                  // Read the received data
     return data; 
 }
 
 void UART5_WriteChar(unsigned char data){
-    while((UART5_FR_R & (1<<5)) != 0);
-    UART5_DR_R = data;
+    while((UART5_FR_R & (1<<5)) != 0);                  // Wait until transmit FIFO is not full
+    UART5_DR_R = data;                                  // Write the data to be transmitted
 }
 
 void UART5_WriteString(char *str){
-    while(*str)
+    while(*str)                                         // Loop until end of string (null character)
     {
-        UART5_WriteChar(*(str++));
+        UART5_WriteChar(*(str++));                      // Send each character and increment pointer
     }
 }
 
@@ -151,41 +145,36 @@ void controlIOS(uint32 message) {
 }
 
 bool isNewMessageReceived(void) {
-    if ((UART5_FR_R & (1 << 4)) == 0) {
-        return true;  // New message received
+    if ((UART5_FR_R & (1 << 4)) == 0) {                 // New message received
+        return true;  
     }
-    return false;  // No new message
+    return false;                                       // No new message
 }
 
 bool isNewSwitchSignal(uint32* prevState) {
-    uint32 currentState = DIO_ReadPin(5, 4);  // Read current state of the switch
-
-    // If the state changes, toggle the lamp
-    if (currentState != *prevState) {
-        *prevState = currentState;  // Update previous state
-        return true;  // Signal detected
+    uint32 currentState = DIO_ReadPin(5, 4);            // Read current state of the switch
+    if (currentState != *prevState) {                   // If the state changes, toggle the lamp
+        *prevState = currentState;                      // Update previous state
+        return true;                                    // Signal detected, return true
     }
-
-    return false;  // No change in state
+    return false;                                       // No change in state
 }
 
 void controlLED(uint32 state) {
     if (state == 1) {
-        GPIO_PORTF_DATA_R = LED_RED;  // Turn ON LED
+        GPIO_PORTF_DATA_R = LED_RED;                    // Turn ON LED, which in turn turn off the lamp
     } else {
-        GPIO_PORTF_DATA_R = 0;        // Turn OFF LED
+        GPIO_PORTF_DATA_R = 0;                          // Turn OFF LED, which in turn turn on the lamp
     }
 }
 
 void toggleLamp(void) {
-    lampState = !lampState;  // Toggle the lamp state
-    controlLED(lampState);   // Update LED based on new lamp state
+    lampState = !lampState;                             // Toggle the lamp state
+    controlLED(lampState);                              // Update LED based on new lamp state
 }
 
 void UART5_WriteFloat(float32 data) {
-    char buffer[32];  // A buffer to hold the string
-
-    snprintf(buffer, sizeof(buffer), "%.2f", data);
-
-    UART5_WriteString(buffer);
+    char buffer[32];                                    // A buffer to hold the string
+    snprintf(buffer, sizeof(buffer), "%.2f", data);     // Convert float to string with 2 decimal places
+    UART5_WriteString(buffer);                          // Send the string to the app
 }

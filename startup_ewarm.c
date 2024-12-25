@@ -44,6 +44,7 @@ static void NmiSR(void);
 static void FaultISR(void);
 static void IntDefaultHandler(void);
 extern void SysTick_Handler(void);
+//the door interrupt part 
 extern void GPIOPortB_Handler(void);
 
 //*****************************************************************************
